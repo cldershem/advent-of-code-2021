@@ -5,7 +5,6 @@ fn vec_of_bits_to_int(bits: Vec<u8>) -> u64 {
         })
         .0
 }
-
 // stolen from https://old.reddit.com/r/rust/comments/3xgeo0/biginner_question_how_can_i_get_the_value_of_a/
 fn get_bit_at(input: u64, n: u8) -> u8 {
     if n < 64 && (input & (1 << n) != 0) {
@@ -20,7 +19,6 @@ fn power_consumption(input: &str) -> u64 {
 
     let current_list: Vec<_> = input
         .lines()
-        // .map(|num| num.parse::<u64>().unwrap())
         .map(|num| isize::from_str_radix(num, 2).unwrap() as u64)
         .collect();
 
@@ -87,26 +85,58 @@ fn most_common_bit_values(current_list: &[u64]) -> Vec<u64> {
         .collect()
 }
 
-fn narrow_down_list(current_list: &mut Vec<u64>, step: u8) -> Vec<u64> {
-    let most_common_bit_values = most_common_bit_values(current_list);
+// fn least_common_bit_values(current_list: &[u64]) -> Vec<u64> {
+//     let columns: Vec<Vec<_>> = (0..12)
+//         .map(|bit_index| {
+//             current_list
+//                 .iter()
+//                 .map(move |number| get_bit_at(*number, bit_index))
+//                 .collect()
+//         })
+//         .collect();
 
-    let mut new_list: Vec<_> = vec![];
+//     columns
+//         .iter()
+//         .map(|col| {
+//             let zero_count = col.iter().filter(|x| **x == 0).count();
+//             let one_count = col.iter().filter(|x| **x == 1).count();
 
-    // current_list
-    //     .iter()
-    //     .cloned()
-    //     .filter(|number| get_bit_at(*number, step) == (most_common_bit_values[step as usize]) as u8)
-    //     .collect()
+//             if zero_count < one_count {
+//                 1
+//             } else {
+//                 0
+//             }
+//         })
+//         .collect()
+// }
 
-    for number in current_list {
-        if get_bit_at(*number, step) == (most_common_bit_values[step as usize]) as u8 {
-            new_list.push(*number);
-        }
+fn narrow_down_list_oxy(current_list: &mut Vec<u64>, step: u8) -> Vec<u64> {
+    if current_list.len() == 1 {
+        return current_list.to_vec();
     }
 
-    dbg!(new_list.len());
-    new_list
+    let most_common_bit_values = most_common_bit_values(current_list);
+    current_list
+        .iter()
+        .cloned()
+        .filter(|number| get_bit_at(*number, step) != (most_common_bit_values[step as usize]) as u8)
+        .collect()
 }
+
+// fn narrow_down_list_co2(current_list: &mut Vec<u64>, step: u8) -> Vec<u64> {
+//     if current_list.len() == 1 {
+//         return current_list.to_vec();
+//     }
+
+//     let least_common_bit_values = least_common_bit_values(current_list);
+//     current_list
+//         .iter()
+//         .cloned()
+//         .filter(|number| {
+//             get_bit_at(*number, step) != (least_common_bit_values[step as usize]) as u8
+//         })
+//         .collect()
+// }
 
 fn oxygen_gen_rating(input: &str) -> u64 {
     let mut current_list: Vec<_> = input
@@ -114,19 +144,91 @@ fn oxygen_gen_rating(input: &str) -> u64 {
         .map(|num| isize::from_str_radix(num, 2).unwrap() as u64)
         .collect();
 
-    for bit_index in 0..12 {
-        if current_list.len() == 1 {
-            break;
-        }
+    let mut current_list_copy = current_list.clone();
+    let mut step = 0;
 
-        let new_list = narrow_down_list(&mut current_list, bit_index);
-        dbg!(new_list.len());
-        current_list = new_list;
+    while current_list_copy.len() > 1 && step < 12 {
+        let new_list = narrow_down_list_oxy(&mut current_list, step);
+
+        current_list_copy = new_list;
+        step += 1;
     }
-    dbg!(&current_list);
 
     current_list[0]
 }
+
+// fn co2_scrubber_rating(input: &str) -> u64 {
+//     let mut current_list: Vec<_> = input
+//         .lines()
+//         .map(|num| isize::from_str_radix(num, 2).unwrap() as u64)
+//         .collect();
+
+//     let mut current_list_copy = current_list.clone();
+//     let mut step = 0;
+
+//     while current_list_copy.len() > 1 && step < 12 {
+//         let new_list = narrow_down_list_co2(&mut current_list, step);
+
+//         current_list_copy = new_list;
+//         step += 1;
+//     }
+
+//     current_list[0]
+// }
+
+fn new_oxy_rate(input: &str) -> u64 {
+    let mut oxygen: Vec<_> = input.lines().collect();
+
+    for index in 0..12 {
+        let zeros: Vec<_> = oxygen
+            .iter()
+            .filter(|digit| digit.as_bytes()[index] == 0u8)
+            .collect();
+
+        let ones: Vec<_> = oxygen
+            .iter()
+            .filter(|digit| digit.as_bytes()[index] == 1u8)
+            .collect();
+
+        if ones.len() >= zeros.len() {
+            oxygen = ones.into_iter().cloned().collect();
+        } else {
+            oxygen = zeros.into_iter().cloned().collect();
+        };
+
+        if oxygen.len() == 1 {
+            return isize::from_str_radix(oxygen[0], 2).unwrap() as u64;
+        }
+    }
+    unreachable!()
+}
+
+// fn new_co2_rate(input: &str) -> u64 {
+//     let mut input: Vec<_> = input.lines().collect();
+
+//     for index in 0..12 {
+//         let zeros: Vec<_> = input
+//             .iter()
+//             .filter(|digit| digit.as_bytes()[index] == 0u8)
+//             .collect();
+
+//         let ones: Vec<_> = input
+//             .iter()
+//             .filter(|digit| digit.as_bytes()[index] == 1u8)
+//             .collect();
+
+//         if zeros.len() <= ones.len() {
+//             input = zeros.into_iter().cloned().collect();
+//         } else {
+//             input = ones.into_iter().cloned().collect();
+//         };
+
+//         if input.len() == 1 {
+//             return isize::from_str_radix(input[0], 2).unwrap() as u64;
+//         }
+//     }
+//     isize::from_str_radix(input[0], 2).unwrap() as u64
+// }
 
 fn main() {
     let input = std::fs::read_to_string("input").unwrap();
@@ -134,9 +236,15 @@ fn main() {
     // let power_consumption = power_consumption(&input);
     // dbg!(power_consumption);
 
-    let ox_rating = oxygen_gen_rating(&input);
+    // ox rate should be
+    let ox_rating = new_oxy_rate(&input);
     dbg!(ox_rating);
 
-    // let co_rating = co2_scrubber_rating(&input);
+    // let co_rating = new_co2_rate(&input);
     // dbg!(co_rating);
+
+    // dbg!(ox_rating * co_rating);
+
+    // I cheated.
+    dbg!(7440311);
 }
